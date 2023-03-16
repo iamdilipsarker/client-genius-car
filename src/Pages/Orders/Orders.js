@@ -3,14 +3,23 @@ import { AuthContext } from "../../contexts/AuthProvider/AuthProvider";
 import OrderRow from "./OrderRow";
 
 const Orders = () => {
-  const { user } = useContext(AuthContext);
+  const { user, logOut } = useContext(AuthContext);
   const [orders, setOrders] = useState([]);
 
   useEffect(() => {
-    fetch(`http://localhost:5000/orders?email=${user?.email}`)
-      .then((res) => res.json())
+    fetch(`http://localhost:5000/orders?email=${user?.email}`, {
+      headers: {
+        authorization: `Bearer ${localStorage.getItem("genius-car-token")}`,
+      },
+    })
+      .then((res) => {
+        if (res.status === 401 || res.status === 403) {
+          return logOut();
+        }
+        return res.json();
+      })
       .then((data) => setOrders(data));
-  }, [user?.email]);
+  }, [user?.email, logOut]);
 
   const handleDelete = (id) => {
     const proceed = window.confirm("Are you sure, you want to delete?");
@@ -42,7 +51,7 @@ const Orders = () => {
       .then((data) => {
         if (data.modifiedCount > 0) {
           const remaining = orders.filter((order) => order._id !== id);
-          const approvingOrder = orders?.find((order) => order._id === id);
+          const approvingOrder = orders.find((order) => order._id === id);
           approvingOrder.status = "Approved";
           const newOrders = [approvingOrder, ...remaining];
           setOrders(newOrders);
